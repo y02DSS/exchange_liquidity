@@ -2,7 +2,7 @@ import multiprocessing, requests, json, requests, hashlib, hmac, datetime, rando
 from typing import List, Dict
 import telebot
 
-CHAT_ID = [450919685, 572212271]
+CHAT_ID = [450919685, 572212271, 5667122494]
 bot = telebot.TeleBot('6640866974:AAHAoI71ZVaD_CK9dXC-XwVQUlaquyhj-Vw')
 user_states = {}
 
@@ -71,8 +71,8 @@ def find_liguidity(symbol_token:str, proxies:dict):
     start_time = previous_interval_time.timestamp()
     end_time = previous_last_interval_time.timestamp()
 
-    url = '/derivatives/v3/public/kline'
-    query_param = f"interval={INTERVAL}&symbol={symbol_token}&limit=2&start={int(start_time*1000)}&end={int(end_time*1000)}"
+    url = '/v5/market/kline'
+    query_param = f"category=linear&interval={INTERVAL}&symbol={symbol_token}&limit=2&start={int(start_time*1000)}&end={int(end_time*1000)}"
     response = requests.get("https://api.bybit.com"+url+"?"+query_param, proxies=proxies).json()["result"]
     if "list" in response:
         start = float(response["list"][0][5])
