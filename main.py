@@ -2,9 +2,9 @@ import multiprocessing, requests, json, requests, hashlib, hmac, datetime, rando
 from typing import List, Dict
 import telebot
 
-CHAT_ID = [450919685]
-allowed_users = ["DSSGF", "s0fronov"]
-bot = telebot.TeleBot('6640866974:AAHAoI71ZVaD_CK9dXC-XwVQUlaquyhj-Vw')
+CHAT_ID = [450919685, 572212271, 480002023]
+allowed_users = ["DSSGF", "AleksandrIvanov90", "Ivan404i"]
+bot = telebot.TeleBot('6981586587:AAGWGA3W6pyu-c7xrynnTtzr-zx3gK7g5BE')
 user_states = {}
 
 shared_resource = multiprocessing.Value('i', True)
@@ -50,7 +50,7 @@ def find_liguidity(symbol_token:str, proxies:dict):
     end_time = previous_last_interval_time.timestamp()
 
     url = '/v5/market/kline'
-    query_param = f"category=linear&interval={INTERVAL}&symbol={symbol_token}&limit=2&start={int(start_time*1000)}&end={int(end_time*1000)}"
+    query_param = f"category=linear&interval={INTERVAL}&symbol={symbol_token}&limit={limit}&start={int(start_time*1000)}&end={int(end_time*1000)}"
     response = requests.get("https://api.bybit.com"+url+"?"+query_param, proxies=proxies).json()["result"]
 
     amount_interval = 0
@@ -82,7 +82,7 @@ def find_liguidity(symbol_token:str, proxies:dict):
             if start > end:
                 dinamic_volume += "⬆️"
             else:
-                dinamic_volume  += "⬇️"
+                dinamic_volume += "⬇️"
             
             if not now_percent_volume:
                 if percent_volume > MIN_PERCENT:
@@ -108,11 +108,12 @@ def find_liguidity(symbol_token:str, proxies:dict):
 
             n_i.append(i)
 
-    response_info = requests.get(f"https://api.bybit.com/v5/market/tickers?category=linear&symbol={symbol_token}").json()['result']
+    response_info = requests.get(f"https://api.bybit.com/v5/market/tickers?category=linear&symbol={symbol_token}", proxies=proxies).json()['result']
     if "list" in response_info:
         fundingRate = round(float(response_info['list'][0]['fundingRate'])*100, 4)
         nextFundingTime = datetime.datetime.fromtimestamp(int(response_info['list'][0]['nextFundingTime'])/1000)
         delta_funding_time = round((nextFundingTime - current_time).total_seconds() / 60)
+        volume24h = format_number(int(float(response_info['list'][0]['volume24h'])))
 
         with open("funding.json", "r") as f:
             data = json.load(f)
@@ -161,18 +162,20 @@ def find_liguidity(symbol_token:str, proxies:dict):
 
     if len(n_i) >= 3 and time_p and now_percent_volume:
         if n_i[-1] == 0 and n_i[-2] == 1 and n_i[-3] == 2:
-            return {"symbol": symbol_token, 
-                    "percent_volume": round(now_percent_volume, 2), 
-                    "dinamic_volume": dinamic_volume,
-                    "percent_price": round(abs(end_price/start_price*100-100), 2),
-                    "interval": str(INTERVAL), 
-                    "type_status": temp_status, 
-                    "time": time_p, 
-                    "amount_repeat": len(n_i),
-                    "fundingRate": fundingRate,
-                    "nextFundingTime": delta_funding_time,
-                    "end_price": end_price
-                    }
+            return {
+                "symbol": symbol_token, 
+                "percent_volume": round(now_percent_volume, 2), 
+                "dinamic_volume": dinamic_volume,
+                "percent_price": round(abs(end_price/start_price*100-100), 2),
+                "interval": str(INTERVAL), 
+                "type_status": temp_status, 
+                "time": time_p, 
+                "amount_repeat": len(n_i),
+                "fundingRate": fundingRate,
+                "nextFundingTime": delta_funding_time,
+                "end_price": end_price,
+                "volume24h": volume24h,
+            }
     return False
 
 
@@ -181,7 +184,6 @@ def run_me(tokens:list, proxie:dict):
         with lock:
             if not shared_resource.value:
                 break
-
         try:
             data = find_liguidity(token, proxie)
             if data:
@@ -199,15 +201,16 @@ def run_me(tokens:list, proxie:dict):
                     message = f"{data['symbol']} {data['interval']}м {data['end_price']}$\n\
                                 📊{data['dinamic_volume']} на {data['percent_volume']}%\n\
                                 {message_status} на {data['percent_price']}%\n\
-                                Фг: {data['fundingRate']}% ({data['nextFundingTime']//60}ч.{data['nextFundingTime']%60}м.)"
+                                Фг: {data['fundingRate']}% ({data['nextFundingTime']//60}ч.{data['nextFundingTime']%60}м.)\n\
+                                Vol24: {data['volume24h']}$"
 
                     for chat_id in CHAT_ID:
                         send_message_to_chat(chat_id, "\n".join(line.strip() for line in message.split("\n")))
 
                 with open('status.json', 'w') as f:
                     json.dump(status, f, indent=2)
-        except:
-            ...
+        except Exception as e:
+            print(e)
 
 
 def split_list(lst:list, n:int) -> List[list]:
@@ -218,8 +221,12 @@ def split_list(lst:list, n:int) -> List[list]:
     return result
 
 
+def format_number(number: int) -> str:
+    return f"{number:,}"
+
+
 def update_tokens() -> int:
-    response = requests.get("https://api.bybit.com/derivatives/v3/public/tickers")
+    response = requests.get("https://api.bybit.com/v5/market/tickers?category=linear")
     if response.status_code != 200:
         return False
     else:
@@ -234,7 +241,7 @@ def update_tokens() -> int:
             tokens_for_funding[i["symbol"]] = {}
             tokens_for_funding[i["symbol"]]["fg"] = 0
             tokens_for_funding[i["symbol"]]["price"] = 0
-            tokens_status[i["symbol"]]= {str(item): 0 for item in [1,3,5,15,30,60,120,240,360,720]}
+            tokens_status[i["symbol"]] = {str(item): 0 for item in [1,3,5,15,30,60,120,240,360,720]}
 
     with open("status.json", "w") as f:
         json.dump(tokens_status, f, indent=2)
@@ -337,6 +344,7 @@ def is_number(text:str) -> bool:
         return True
     except ValueError:
         return False
+
 
 def is_float(text:str) -> bool:
     try:
