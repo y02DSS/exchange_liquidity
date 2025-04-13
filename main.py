@@ -3,8 +3,8 @@ from typing import List, Dict
 import telebot
 
 CHAT_ID = [450919685]
-allowed_users = ["DSSGF"]
-bot = telebot.TeleBot('6981586587:AAGWGA3W6pyu-c7xrynnTtzr-zx3gK7g5BE')
+allowed_users = ["DSSGF", "s0fronov"]
+bot = telebot.TeleBot('6640866974:AAHAoI71ZVaD_CK9dXC-XwVQUlaquyhj-Vw')
 user_states = {}
 
 shared_resource = multiprocessing.Value('i', True)
