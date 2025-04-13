@@ -115,6 +115,9 @@ def find_liguidity(symbol_token:str, proxies:dict):
         delta_funding_time = round((nextFundingTime - current_time).total_seconds() / 60)
         volume24h = format_number(int(float(response_info['list'][0]['volume24h'])))
 
+        if abs(fundingRate) < FUNDINGRATE:
+            return False
+
         with open("funding.json", "r") as f:
             data = json.load(f)
 
@@ -125,13 +128,13 @@ def find_liguidity(symbol_token:str, proxies:dict):
             data[symbol_token]["fg"] = fundingRate
 
         elif data[symbol_token]["fg"] != fundingRate:
-            flag = False
-            if FUNDINGRATE >= 0:
-                if fundingRate > FUNDINGRATE:
-                    flag = True
-            else:
-                if fundingRate < FUNDINGRATE:
-                    flag = True
+            flag = True
+            # if FUNDINGRATE >= 0:
+            #     if fundingRate > FUNDINGRATE:
+            #         flag = True
+            # else:
+            #     if fundingRate < FUNDINGRATE:
+            #         flag = True
 
             if flag:
                 change_fundingRate = round(abs(abs(data[symbol_token]["fg"]) - abs(fundingRate)), 4)
@@ -198,11 +201,15 @@ def run_me(tokens:list, proxie:dict):
                     else:
                         message_status = "🟢"
 
+                    crit_funding = ""
+                    if data['fundingRate'] < FUNDINGRATE_CRIT:
+                        crit_funding = "🔥🔥🔥"
+
                     message = f"{data['symbol']} {data['interval']}м {data['end_price']}$\n\
                                 📊{data['dinamic_volume']} на {data['percent_volume']}%\n\
                                 {message_status} на {data['percent_price']}%\n\
                                 Фг: {data['fundingRate']}% ({data['nextFundingTime']//60}ч.{data['nextFundingTime']%60}м.)\n\
-                                Vol24: {data['volume24h']}$"
+                                Vol24: {data['volume24h']}$\n{crit_funding}"
 
                     for chat_id in CHAT_ID:
                         send_message_to_chat(chat_id, "\n".join(line.strip() for line in message.split("\n")))
@@ -287,7 +294,7 @@ def update_config(new_info:list) -> dict:
 
 
 def start_parse():
-    global INTERVAL, MIN_PERCENT, MIN_BUDGET, FUNDINGRATE, NEXT_PERCENT, is_parsing
+    global INTERVAL, MIN_PERCENT, MIN_BUDGET, FUNDINGRATE, FUNDINGRATE_CRIT, NEXT_PERCENT, is_parsing
     is_parsing = True
     with lock:
         shared_resource.value = True
@@ -305,6 +312,7 @@ def start_parse():
         MIN_BUDGET = config_data['MIN_BUDGET']
         FUNDINGRATE = config_data['FUNDINGRATE']
         NEXT_PERCENT = config_data['NEXT_PERCENT']
+        FUNDINGRATE_CRIT = config_data['FUNDINGRATE_CRIT']
 
         with open("tokens.json", "r") as f:
             data_tokens = json.load(f)
@@ -377,17 +385,18 @@ def start(message):
     item4 = telebot.types.KeyboardButton("Изменить интервал")
     item5 = telebot.types.KeyboardButton("Изменить бюджет")
     item6 = telebot.types.KeyboardButton("Изменить ставку")
+    item7 = telebot.types.KeyboardButton("Изменить крит. ставку")
 
-    item7 = telebot.types.KeyboardButton("Изменить процент")
-    item8 = telebot.types.KeyboardButton("Изменить второй процент")
+    item8 = telebot.types.KeyboardButton("Изменить процент")
+    item9 = telebot.types.KeyboardButton("Изменить второй процент")
 
-    item9 = telebot.types.KeyboardButton("Остановить")
-    item10 = telebot.types.KeyboardButton("Запустить")
+    item10 = telebot.types.KeyboardButton("Остановить")
+    item11 = telebot.types.KeyboardButton("Запустить")
 
     markup.row(*[item1, item2, item3])
-    markup.row(*[item4, item5, item6])
-    markup.row(*[item7, item8])
-    markup.row(*[item9, item10])
+    markup.row(*[item4, item5, item6, item7])
+    markup.row(*[item8, item9])
+    markup.row(*[item10, item11])
     
     bot.send_message(message.chat.id, "Выберите опцию:", reply_markup=markup)
 
@@ -438,13 +447,20 @@ def change_fundingRate_bot(message):
     user_states[message.chat.id] = "waiting_for_text_change_fundingRate"
     bot.send_message(message.chat.id, "Введите изменение ставки дробным числом (десятичную часть через точку)")
 
+
+@bot.message_handler(func=lambda message: message.text == "Изменить крит. ставку")
+def change_crit_fundingRate_bot(message):
+    user_states[message.chat.id] = "waiting_for_text_change_crit_fundingRate"
+    bot.send_message(message.chat.id, "Введите изменение ставки дробным числом (десятичную часть через точку)")
+
 @bot.message_handler(func=lambda message: message.chat.id in user_states and 
                                   user_states[message.chat.id] in ["waiting_for_text_change_interval", 
                                                                    "waiting_for_text_change_percent",
                                                                    "waiting_for_text_change_next_percent",
                                                                    "waiting_for_text_add_proxie",
                                                                    "waiting_for_text_budget",
-                                                                   "waiting_for_text_change_fundingRate"
+                                                                   "waiting_for_text_change_fundingRate",
+                                                                   "waiting_for_text_change_crit_fundingRate"
                                                                    ])
 def handle_text(message):
     user_state = user_states[message.chat.id]
@@ -484,6 +500,13 @@ def handle_text(message):
     elif user_state == "waiting_for_text_change_fundingRate":
         if is_float(text):
             data = update_config(['FUNDINGRATE', float(text)])
+            send_info_config(message.chat.id, data)
+        else:
+            bot.send_message(message.chat.id, f"Ошибка.")
+
+    elif user_state == "waiting_for_text_change_crit_fundingRate":
+        if is_float(text):
+            data = update_config(['FUNDINGRATE_CRIT', float(text)])
             send_info_config(message.chat.id, data)
         else:
             bot.send_message(message.chat.id, f"Ошибка.")
