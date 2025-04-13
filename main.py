@@ -49,9 +49,9 @@ def find_liguidity(symbol_token:str, proxies:dict):
     start_time = previous_interval_time.timestamp()
     end_time = previous_last_interval_time.timestamp()
 
-    url = '/derivatives/v3/public/kline'
-    query_param = f"?interval={INTERVAL}&symbol={symbol_token}&limit={limit}&start={int(start_time*1000)}&end={int(end_time*1000)}"
-    response = requests.get("https://api.bybit.com"+url+query_param).json()["result"]
+    url = '/v5/market/kline'
+    query_param = f"category=linear&interval={INTERVAL}&symbol={symbol_token}&limit=2&start={int(start_time*1000)}&end={int(end_time*1000)}"
+    response = requests.get("https://api.bybit.com"+url+"?"+query_param, proxies=proxies).json()["result"]
 
     amount_interval = 0
     temp_status = "Шорт" if float(response["list"][0][4]) < float(response["list"][1][4]) else "Лонг"
@@ -421,7 +421,7 @@ def change_percent_bot(message):
     bot.send_message(message.chat.id, "Введите процент целым числом")
 
 @bot.message_handler(func=lambda message: message.text == "Изменить второй процент")
-def change_percent_bot(message):
+def change_percent_2_bot(message):
     user_states[message.chat.id] = "waiting_for_text_change_next_percent"
     bot.send_message(message.chat.id, "Введите процент целым числом")
 
