@@ -1,5 +1,6 @@
 from main import update_tokens, update_proxie, update_config, clear_status
 import telebot
+# "socks5://sC3G57:PGX3jb@98.170.57.231:4145"
 
 CHAT_ID = 450919685
 bot = telebot.TeleBot('6640866974:AAHAoI71ZVaD_CK9dXC-XwVQUlaquyhj-Vw')
