@@ -550,7 +550,7 @@ def send_info_config(chat_id, data, save=True):
                 Второй процент: {data['NEXT_PERCENT']}%\n\
                 Минимальный бюджет: {data['MIN_BUDGET']}$\n\
                 Интервал: {data['INTERVAL']}м\n\
-                Изменение ставки на: {data['FUNDINGRATE']}%\n\
+                Модуль ставки: {data['FUNDINGRATE']}%\n\
                 Крит. изменение ставки на: {data['FUNDINGRATE_CRIT']}%\n"
     send_message_to_chat(chat_id, "\n".join(line.strip() for line in message.split("\n")))
 
