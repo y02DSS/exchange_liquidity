@@ -392,11 +392,12 @@ def start(message):
 
     item10 = telebot.types.KeyboardButton("Остановить")
     item11 = telebot.types.KeyboardButton("Запустить")
+    item12 = telebot.types.KeyboardButton("Настройки")
 
     markup.row(*[item1, item2, item3])
     markup.row(*[item4, item5, item6, item7])
     markup.row(*[item8, item9])
-    markup.row(*[item10, item11])
+    markup.row(*[item10, item11, item12])
     
     bot.send_message(message.chat.id, "Выберите опцию:", reply_markup=markup)
 
@@ -527,6 +528,13 @@ def start_bot(message):
         bot.send_message(message.chat.id, "Поиск запущен")
         start_parse()
 
+@bot.message_handler(func=lambda message: message.text == "Настройки")
+def settings(message):
+    with open("config.json", "r") as f:
+        data = json.load(f)
+        
+    send_info_config(message.chat.id, data)
+
 @bot.message_handler(func=lambda message: message.text == "Остановить")
 def stop_bot(message):
     bot.send_message(message.chat.id, "Поиск остановлен")
@@ -541,7 +549,8 @@ def send_info_config(chat_id, data):
                 Второй процент: {data['NEXT_PERCENT']}%\n\
                 Минимальный бюджет: {data['MIN_BUDGET']}$\n\
                 Интервал: {data['INTERVAL']}м\n\
-                Изменение ставки на: {data['FUNDINGRATE']}%\n"
+                Изменение ставки на: {data['FUNDINGRATE']}%\n\
+                Крит. изменение ставки на: {data['FUNDINGRATE_CRIT']}%\n"
     send_message_to_chat(chat_id, "\n".join(line.strip() for line in message.split("\n")))
 
 if __name__ == "__main__":
