@@ -532,8 +532,8 @@ def start_bot(message):
 def settings(message):
     with open("config.json", "r") as f:
         data = json.load(f)
-        
-    send_info_config(message.chat.id, data)
+
+    send_info_config(message.chat.id, data, False)
 
 @bot.message_handler(func=lambda message: message.text == "Остановить")
 def stop_bot(message):
@@ -543,8 +543,9 @@ def stop_bot(message):
 def send_message_to_chat(chat_id, message):
     bot.send_message(chat_id, message)
 
-def send_info_config(chat_id, data):
-    message = f"Сохранено! Новые настройки:\n\
+def send_info_config(chat_id, data, save=True):
+    start = "Сохранено! Новые настройки:" if save else "Текущие настройки:"
+    message = f"{start}\n\
                 Минимальный процент: {data['MIN_PERCENT']}%\n\
                 Второй процент: {data['NEXT_PERCENT']}%\n\
                 Минимальный бюджет: {data['MIN_BUDGET']}$\n\
